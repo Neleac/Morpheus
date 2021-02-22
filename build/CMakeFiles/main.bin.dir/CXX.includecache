@@ -1,0 +1,42 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/wangc21/Desktop/Morpheus/main.cpp
+iostream
+-
+math.h
+-
+glad/glad.h
+-
+GLFW/glfw3.h
+-
+glm/glm.hpp
+-
+glm/gtc/matrix_transform.hpp
+-
+glm/gtc/type_ptr.hpp
+-
+opencv2/opencv.hpp
+-
+openpose/headers.hpp
+-
+shaderprogram.h
+/home/wangc21/Desktop/Morpheus/shaderprogram.h
+
+/home/wangc21/Desktop/Morpheus/shaderprogram.h
+string
+-
+fstream
+-
+sstream
+-
+iostream
+-
+glad/glad.h
+-
+
