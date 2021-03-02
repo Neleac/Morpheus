@@ -131,7 +131,7 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * circleVerts.size(), circleVerts.data(), GL_DYNAMIC_DRAW);
 
     // draw in wireframe polygons
-    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -216,44 +216,27 @@ int main(int argc, char* argv[]) {
                     glUniform4f(colorUni, 1.0f, 0.5f, 0.2f, 1.0f);
                     glDrawArrays(GL_TRIANGLE_FAN, 0, circleQuality + 2);
 
-                    // right eye
-                    if (keypoints[{0, 15, 2}] != 0) {
-                        model_M = glm::mat4(1.0f);
-                        glm::vec2 eyeLoc = glm::vec2(keypoints[{0, 15, 0}], 
-                                                     keypoints[{0, 15, 1}]);
+                    // eyes
+                    for (int i = 15; i <= 16; i++) {
+                        if (keypoints[{0, i, 2}] != 0) {
+                            model_M = glm::mat4(1.0f);
+                            glm::vec2 eyeLoc = glm::vec2(keypoints[{0, i, 0}], 
+                                                        keypoints[{0, i, 1}]);
 
-                        model_M = glm::translate(model_M, glm::vec3(eyeLoc.x - circleLoc.x, 
-                                                                    eyeLoc.y - circleLoc.y, 
-                                                                    0.0f));
-                        model_M = glm::scale(model_M, glm::vec3(faceRadius / 5, faceRadius / 5, faceRadius / 5));
-                        glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
-                        glUniform4f(colorUni, 0.0f, 0.0f, 0.0f, 1.0f);
-                        glDrawArrays(GL_TRIANGLE_FAN, 0, circleQuality + 2);
-                    }
-
-                    // left eye
-                    if (keypoints[{0, 16, 2}] != 0) {
-                        model_M = glm::mat4(1.0f);
-                        glm::vec2 eyeLoc = glm::vec2(keypoints[{0, 16, 0}], 
-                                                     keypoints[{0, 16, 1}]);
-
-                        model_M = glm::translate(model_M, glm::vec3(eyeLoc.x - circleLoc.x, 
-                                                                    eyeLoc.y - circleLoc.y, 
-                                                                    0.0f));
-                        model_M = glm::scale(model_M, glm::vec3(faceRadius / 5, faceRadius / 5, faceRadius / 5));
-                        glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
-                        glUniform4f(colorUni, 0.0f, 0.0f, 0.0f, 1.0f);
-                        glDrawArrays(GL_TRIANGLE_FAN, 0, circleQuality + 2);
+                            model_M = glm::translate(model_M, glm::vec3(eyeLoc.x - circleLoc.x, 
+                                                                        eyeLoc.y - circleLoc.y, 
+                                                                        0.0f));
+                            model_M = glm::scale(model_M, glm::vec3(faceRadius / 5, faceRadius / 5, faceRadius / 5));
+                            glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
+                            glUniform4f(colorUni, 0.0f, 0.0f, 0.0f, 1.0f);
+                            glDrawArrays(GL_TRIANGLE_FAN, 0, circleQuality + 2);
+                        }
                     }
                 }
             }
         } else {
             std::cout << "Null or empty processed data" << std::endl;
         }
-
-        //glBindVertexArray(VAO);
-        // square
-        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
         // swap buffers, poll IO events
         glfwSwapBuffers(window);
