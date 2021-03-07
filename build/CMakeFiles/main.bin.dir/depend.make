@@ -5,4 +5,5 @@ CMakeFiles/main.bin.dir/glad.c.o: ../glad.c
 
 CMakeFiles/main.bin.dir/main.cpp.o: ../main.cpp
 CMakeFiles/main.bin.dir/main.cpp.o: ../shaderprogram.h
+CMakeFiles/main.bin.dir/main.cpp.o: ../stb_image.h
 
