@@ -15,29 +15,40 @@
 #include "stb_image.h"
 
 
-const unsigned int DISPLAY_WIDTH = 1920;
+const unsigned int DISPLAY_WIDTH = 1080;
 const unsigned int DISPLAY_HEIGHT = 1080;
-const char* VERT_SHADER_PATH = "/home/wangc21/Desktop/Morpheus/shaders/sample.vert";
-const char* FRAG_SHADER_PATH = "/home/wangc21/Desktop/Morpheus/shaders/sample.frag";
 const GLfloat LIMB_WIDTH = 50.0f;
 const unsigned int CIRCLE_QUALITY = 100;
 const GLfloat FACE_RADIUS = 100.0f;
 
 // rectangle limb mappings
-int limbMap[14][2] = {  {0, 1},     // neck
+/*
+int limbMap[15][2] = {  {0, 1},     // neck
                         {2, 1},     // R shoulder
                         {3, 2},     // R bicep
                         {4, 3},     // R forearm
                         {1, 5},     // L shoulder
                         {5, 6},     // L bicep
                         {6, 7},     // L forearm
-                        {1, 8},     // torso
+                        {1, 8},     // torso 1
+                        {8, 1},     // torso 2
                         {9, 8},     // R hip
                         {10, 9},    // R thigh
                         {11, 10},   // R calf
                         {8, 12},    // L hip
                         {12, 13},   // L thigh
                         {13, 14}};  // L calf
+*/
+int limbMap[10][2] = {  {1, 8},     // 0. torso 1
+                        {8, 1},     // 1. torso 2
+                        {3, 2},     // 2. R bicep
+                        {4, 3},     // 3. R forearm
+                        {5, 6},     // 4. L bicep
+                        {6, 7},     // 5. L forearm
+                        {10, 9},    // 6. R thigh
+                        {11, 10},   // 7. R calf
+                        {12, 13},   // 8. L thigh
+                        {13, 14}};  // 9. L calf
 
 // view coords to normalized screen coords
 glm::mat4 projection_M = glm::ortho(static_cast<float>(DISPLAY_WIDTH), 0.0f, 
@@ -87,12 +98,12 @@ int main(int argc, char* argv[]) {
     }
 
     // create shader programs
-    ShaderProgram sp(VERT_SHADER_PATH, FRAG_SHADER_PATH);
-    sp.use();
+    ShaderProgram defaultSP("../shaders/default.vert", "../shaders/default.frag");
+    ShaderProgram avatarSP("../shaders/default.vert", "../shaders/avatar.frag");
 
     // textures
     int texWidth, texHeight, texChannels;
-    unsigned char* texData = stbi_load("/home/wangc21/Desktop/Morpheus/textures/white.jpg", &texWidth, &texHeight, &texChannels, 0);
+    unsigned char* texData = stbi_load("../textures/white.jpg", &texWidth, &texHeight, &texChannels, 0);
     unsigned int blankTexture;
     glGenTextures(1, &blankTexture);
     glBindTexture(GL_TEXTURE_2D, blankTexture);
@@ -100,7 +111,7 @@ int main(int argc, char* argv[]) {
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(texData);
 
-    texData = stbi_load("/home/wangc21/Desktop/Morpheus/textures/skin.jpg", &texWidth, &texHeight, &texChannels, 0);
+    texData = stbi_load("../textures/skin.jpg", &texWidth, &texHeight, &texChannels, 0);
     unsigned int skinTexture;
     glGenTextures(1, &skinTexture);
     glBindTexture(GL_TEXTURE_2D, skinTexture);
@@ -108,11 +119,29 @@ int main(int argc, char* argv[]) {
     glGenerateMipmap(GL_TEXTURE_2D);
     stbi_image_free(texData);
 
+    std::vector<unsigned int> avatarTextures;
+    for (unsigned int i = 0; i <= sizeof(limbMap) / sizeof(limbMap[0]); i++) {
+        texData = stbi_load(("../textures/avatar/" + std::to_string(i) + ".png").c_str(), &texWidth, &texHeight, &texChannels, 0);
+        unsigned int texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, texData);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        avatarTextures.push_back(texture);
+        stbi_image_free(texData);
+    }
+
     // projection transformation, further transformations change model coords
-    unsigned int transUni = glGetUniformLocation(sp.ID, "projection");
-    glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(projection_M));
-    transUni = glGetUniformLocation(sp.ID, "model");
-    unsigned int colorUni = glGetUniformLocation(sp.ID, "color");
+    defaultSP.use();
+    unsigned int projUni = glGetUniformLocation(defaultSP.ID, "projection");
+    glUniformMatrix4fv(projUni, 1, GL_FALSE, glm::value_ptr(projection_M));
+    unsigned int modelUni1 = glGetUniformLocation(defaultSP.ID, "model");
+    unsigned int colorUni = glGetUniformLocation(defaultSP.ID, "color");
+
+    avatarSP.use();
+    projUni = glGetUniformLocation(avatarSP.ID, "projection");
+    glUniformMatrix4fv(projUni, 1, GL_FALSE, glm::value_ptr(projection_M));
+    unsigned int modelUni2 = glGetUniformLocation(avatarSP.ID, "model");
 
     // create buffers and buffer data
     unsigned int rectVAO, circVAO, rectVBO, circVBO;
@@ -129,10 +158,10 @@ int main(int argc, char* argv[]) {
     glEnableVertexAttribArray(1);
     // rectangle primitive
     std::vector<GLfloat> rectVerts = {
-        0.0f, LIMB_WIDTH,    0.0f, 0.0f,    // bottom left
-        1.0f, LIMB_WIDTH,    1.0f, 0.0f,    // bottom right
-        0.0f, 0.0f,          0.0f, 1.0f,    // top left
-        1.0f, 0.0f,          1.0f, 1.0f     // top right
+        0.0f, 1.0f,    0.0f, 0.0f,    // bottom left
+        1.0f, 1.0f,    1.0f, 0.0f,    // bottom right
+        0.0f, 0.0f,    0.0f, 1.0f,    // top left
+        1.0f, 0.0f,    1.0f, 1.0f     // top right
     };
     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * rectVerts.size(), rectVerts.data(), GL_DYNAMIC_DRAW);
 
@@ -182,16 +211,40 @@ int main(int argc, char* argv[]) {
             // if person detected
             if (keypoints.getSize(0) != 0) {
 
+                glBindVertexArray(rectVAO);
                 glm::mat4 model_M;
 
+                // scale dimensions by nose-ear distance
+                GLfloat limbWidth = LIMB_WIDTH;
+                GLfloat faceRadius = FACE_RADIUS;
+                if (keypoints[{0, 0, 2}] != 0) {
+
+                    glm::vec2 noseLoc = glm::vec2(keypoints[{0, 0, 0}], 
+                                                  keypoints[{0, 0, 1}]);
+
+                    if (keypoints[{0, 17, 2}] != 0) {
+                        // right ear detected
+                        glm::vec2 earLoc = glm::vec2(keypoints[{0, 17, 0}], 
+                                                        keypoints[{0, 17, 1}]);
+                        faceRadius = glm::distance(noseLoc, earLoc);
+                        limbWidth = faceRadius / 2;
+                    } else if (keypoints[{0, 18, 2}] != 0) {
+                        // left ear detected
+                        glm::vec2 earLoc = glm::vec2(keypoints[{0, 18, 0}], 
+                                                        keypoints[{0, 18, 1}]);
+                        faceRadius = glm::distance(noseLoc, earLoc);
+                        limbWidth = faceRadius / 2;
+                    }
+                }
+
+                avatarSP.use();
+
                 // limbs
-                glBindVertexArray(rectVAO);
-                for (unsigned int i = 0; i < 14; i++) {
+                for (unsigned int i = 0; i < sizeof(limbMap) / sizeof(limbMap[0]); i++) {
                     int idx1 = limbMap[i][0];
                     int idx2 = limbMap[i][1];
 
                     if (keypoints[{0, idx1, 2}] != 0 && keypoints[{0, idx2, 2}] != 0) {
-                        model_M = glm::mat4(1.0f);
                         glm::vec2 coord1 = glm::vec2(keypoints[{0, idx1, 0}], 
                                                      keypoints[{0, idx1, 1}]);
                         glm::vec2 coord2 = glm::vec2(keypoints[{0, idx2, 0}], 
@@ -199,13 +252,65 @@ int main(int argc, char* argv[]) {
                         GLfloat length = glm::distance(coord1, coord2);
                         GLfloat theta = atan2(coord2.y - coord1.y, coord2.x - coord1.x);
 
+                        model_M = glm::mat4(1.0f);
+                        model_M = glm::translate(model_M, glm::vec3(coord1.x, coord1.y, 0.0f));
+                        model_M = glm::rotate(model_M, theta, glm::vec3(0.0f, 0.0f, 1.0f));
+                        // make torso wider
+                        if (i == 0 || i == 1) {
+                            model_M = glm::scale(model_M, glm::vec3(length, limbWidth * 2, 1.0f));
+                        } else {
+                            model_M = glm::scale(model_M, glm::vec3(length, limbWidth, 1.0f));
+                        }
+                        glUniformMatrix4fv(modelUni2, 1, GL_FALSE, glm::value_ptr(model_M));
+                        glBindTexture(GL_TEXTURE_2D, avatarTextures[i]);
+                        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                    }
+                }
+
+                // avatar head
+                if (keypoints[{0, 0, 2}] != 0) {
+                    glm::vec2 noseLoc = glm::vec2(keypoints[{0, 0, 0}], 
+                                                  keypoints[{0, 0, 1}]);
+
+                    model_M = glm::mat4(1.0f);
+                    model_M = glm::translate(model_M, glm::vec3(noseLoc.x - faceRadius, 
+                                                                noseLoc.y - faceRadius, 
+                                                                0.0f));
+                    model_M = glm::scale(model_M, glm::vec3(2 * faceRadius, 2 * faceRadius, 1.0f));
+                    glUniformMatrix4fv(modelUni2, 1, GL_FALSE, glm::value_ptr(model_M));
+                    glBindTexture(GL_TEXTURE_2D, avatarTextures[10]);
+                    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                }
+
+                /*
+                defaultSP.use();
+
+                // limbs
+                for (unsigned int i = 0; i < sizeof(limbMap) / sizeof(limbMap[0]); i++) {
+                    int idx1 = limbMap[i][0];
+                    int idx2 = limbMap[i][1];
+
+                    if (keypoints[{0, idx1, 2}] != 0 && keypoints[{0, idx2, 2}] != 0) {
+                        glm::vec2 coord1 = glm::vec2(keypoints[{0, idx1, 0}], 
+                                                     keypoints[{0, idx1, 1}]);
+                        glm::vec2 coord2 = glm::vec2(keypoints[{0, idx2, 0}], 
+                                                     keypoints[{0, idx2, 1}]);
+                        GLfloat length = glm::distance(coord1, coord2);
+                        GLfloat theta = atan2(coord2.y - coord1.y, coord2.x - coord1.x);
+
+                        model_M = glm::mat4(1.0f);
                         model_M = glm::translate(model_M, glm::vec3(coord1.x + LIMB_WIDTH / 2, 
                                                                     coord1.y + LIMB_WIDTH / 2, 
                                                                     0.0f));
                         model_M = glm::rotate(model_M, theta, glm::vec3(0.0f, 0.0f, 1.0f));
-                        model_M = glm::scale(model_M, glm::vec3(length, 1.0f, 1.0f));
-                        glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
-                        //glUniform4f(colorUni, 1.0f, 0.5f, 0.2f, 1.0f);
+                        // make torso wider
+                        if (i == 7 || i == 8) {
+                            model_M = glm::scale(model_M, glm::vec3(length, limbWidth * 1.5, 1.0f));
+                        } else {
+                            model_M = glm::scale(model_M, glm::vec3(length, limbWidth, 1.0f));
+                        }
+                        glUniformMatrix4fv(modelUni1, 1, GL_FALSE, glm::value_ptr(model_M));
+                        //glUniform4f(colorUni, 0.96f, 0.96f, 0.86f, 1.0f);
                         glUniform4f(colorUni, 1.0f, 1.0f, 1.0f, 1.0f);
                         glBindTexture(GL_TEXTURE_2D, skinTexture);
                         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -215,30 +320,16 @@ int main(int argc, char* argv[]) {
                 // head
                 glBindVertexArray(circVAO);
                 if (keypoints[{0, 0, 2}] != 0) {
-                    model_M = glm::mat4(1.0f);
                     glm::vec2 noseLoc = glm::vec2(keypoints[{0, 0, 0}], 
                                                   keypoints[{0, 0, 1}]);
 
-                    // scale face by nose-ear distance
-                    GLfloat faceRadius = FACE_RADIUS;
-                    if (keypoints[{0, 17, 2}] != 0) {
-                        // right ear detected
-                        glm::vec2 earLoc = glm::vec2(keypoints[{0, 17, 0}], 
-                                                     keypoints[{0, 17, 1}]);
-                        faceRadius = glm::distance(noseLoc, earLoc);
-                    } else if (keypoints[{0, 18, 2}] != 0) {
-                        // left ear detected
-                        glm::vec2 earLoc = glm::vec2(keypoints[{0, 18, 0}], 
-                                                     keypoints[{0, 18, 1}]);
-                        faceRadius = glm::distance(noseLoc, earLoc);
-                    }
-
+                    model_M = glm::mat4(1.0f);
                     model_M = glm::translate(model_M, glm::vec3(noseLoc.x - circleLoc.x, 
                                                                 noseLoc.y - circleLoc.y, 
                                                                 0.0f));
                     model_M = glm::scale(model_M, glm::vec3(faceRadius, faceRadius, faceRadius));
-                    glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
-                    glUniform4f(colorUni, 1.0f, 0.5f, 0.2f, 1.0f);
+                    glUniformMatrix4fv(modelUni1, 1, GL_FALSE, glm::value_ptr(model_M));
+                    glUniform4f(colorUni, 0.96f, 0.96f, 0.86f, 1.0f);
                     glBindTexture(GL_TEXTURE_2D, blankTexture);
                     glDrawArrays(GL_TRIANGLE_FAN, 0, CIRCLE_QUALITY + 2);
 
@@ -253,13 +344,14 @@ int main(int argc, char* argv[]) {
                                                                         eyeLoc.y - circleLoc.y, 
                                                                         0.0f));
                             model_M = glm::scale(model_M, glm::vec3(faceRadius / 5, faceRadius / 5, faceRadius / 5));
-                            glUniformMatrix4fv(transUni, 1, GL_FALSE, glm::value_ptr(model_M));
+                            glUniformMatrix4fv(modelUni1, 1, GL_FALSE, glm::value_ptr(model_M));
                             glUniform4f(colorUni, 0.0f, 0.0f, 0.0f, 1.0f);
                             glBindTexture(GL_TEXTURE_2D, blankTexture);
                             glDrawArrays(GL_TRIANGLE_FAN, 0, CIRCLE_QUALITY + 2);
                         }
                     }
                 }
+                */
             }
         } else {
             std::cout << "Null or empty processed data" << std::endl;
@@ -276,7 +368,8 @@ int main(int argc, char* argv[]) {
     glDeleteVertexArrays(1, &circVAO);
     glDeleteBuffers(1, &rectVBO);
     glDeleteBuffers(1, &circVBO);
-    sp.free();
+    defaultSP.free();
+    avatarSP.free();
     glfwTerminate();
     return 0;
 }
