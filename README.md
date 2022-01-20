@@ -1,5 +1,5 @@
 # Morpheus
-The inspiration behind my current virtual avatar project, *Mesekai*, launching Q4 2021.
+The inspiration behind my web app, [*Mesekai*](https://github.com/Neleac/Mesekai).
 
 ## YouTube Video
 https://www.youtube.com/watch?v=MW5gHIFI1gA
